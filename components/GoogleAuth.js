@@ -52,21 +52,13 @@ export default function GoogleAuth() {
       .setCallback((data) => {
         if (data.action === window.google.picker.Action.PICKED) {
           const items = data.docs;
-          // Filter out folders and store only files
-          const files = items.filter(
-            (item) => !item.mimeType.includes("folder")
-          );
-          setSelectedItems(files);
-
-          // Log only the files for clarity
+          setSelectedItems(items);
           console.log(
-            "Selected files:",
-            files.map((file) => ({
-              name: file.name,
-              id: file.id,
-              size: file.sizeBytes
-                ? `${(file.sizeBytes / 1024).toFixed(2)} KB`
-                : "N/A",
+            "Selected items:",
+            items.map((item) => ({
+              name: item.name,
+              id: item.id,
+              type: item.mimeType.includes("folder") ? "Folder" : "File",
             }))
           );
         }
