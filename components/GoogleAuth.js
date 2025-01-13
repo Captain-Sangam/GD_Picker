@@ -51,11 +51,29 @@ export default function GoogleAuth() {
       .setDeveloperKey(process.env.NEXT_PUBLIC_GOOGLE_API_KEY)
       .setCallback((data) => {
         if (data.action === window.google.picker.Action.PICKED) {
-          const items = data.docs;
-          setSelectedItems(items);
+          const newItems = data.docs;
+          
+          // Merge new selections with existing ones
+          setSelectedItems(prevItems => {
+            // Create a map of existing items by ID
+            const existingItemsMap = new Map(
+              prevItems.map(item => [item.id, item])
+            );
+            
+            // Add new items if they don't exist
+            newItems.forEach(item => {
+              if (!existingItemsMap.has(item.id)) {
+                existingItemsMap.set(item.id, item);
+              }
+            });
+            
+            // Convert map back to array
+            return Array.from(existingItemsMap.values());
+          });
+
           console.log(
             "Selected items:",
-            items.map((item) => ({
+            newItems.map((item) => ({
               name: item.name,
               id: item.id,
               type: item.mimeType.includes("folder") ? "Folder" : "File",
@@ -67,6 +85,10 @@ export default function GoogleAuth() {
 
     picker.setVisible(true);
   }, [user, pickerInited]);
+
+  const removeItem = (itemId) => {
+    setSelectedItems(selectedItems.filter(item => item.id !== itemId));
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
@@ -93,7 +115,7 @@ export default function GoogleAuth() {
                     {selectedItems.length > 0 && (
                       <div className="mt-4">
                         <h3 className="font-bold mb-2">
-                          Selected Files ({selectedItems.length})
+                          Selected Items ({selectedItems.length})
                         </h3>
                         <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
                           {selectedItems.map((item, index) => (
@@ -103,7 +125,16 @@ export default function GoogleAuth() {
                             >
                               <span className="text-sm">
                                 {index + 1}. {item.name}
+                                {item.mimeType.includes("folder") && " "}
                               </span>
+                              {item.mimeType.includes("folder") && (
+                                <button
+                                  onClick={() => removeItem(item.id)}
+                                  className="ml-2 text-gray-500 hover:text-red-500"
+                                >
+                                  ✕
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
