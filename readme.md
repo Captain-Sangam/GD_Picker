@@ -11,5 +11,7 @@ They are on your local only and not stored anywhere
 
 Create a copy of `env.example` as `.env.local` and replace them with the respective keys
 
+Google' official guide is [here](https://developers.google.com/drive/picker/guides/overview)
+
 - To install dependencies, run `npm install`
 - To start the server, run `npm run dev`
