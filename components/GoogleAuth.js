@@ -31,7 +31,7 @@ export default function GoogleAuth() {
     onSuccess: (response) => {
       setUser(response);
     },
-    scope: "https://www.googleapis.com/auth/drive.file",
+    scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly",
   });
 
   const showPicker = useCallback(() => {
@@ -39,6 +39,7 @@ export default function GoogleAuth() {
 
     const picker = new window.google.picker.PickerBuilder()
       .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
+      .enableFeature(window.google.picker.Feature.SUPPORT_DRIVES)
       .addView(
         new window.google.picker.DocsView()
           .setIncludeFolders(true)
@@ -46,6 +47,14 @@ export default function GoogleAuth() {
           .setMimeTypes(
             "application/vnd.google-apps.folder,application/vnd.google-apps.document"
           )
+      )
+      .addView(new window.google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setEnableDrives(true)
+        .setMimeTypes(
+          "application/vnd.google-apps.folder,application/vnd.google-apps.document"
+        )
       )
       .setOAuthToken(user.access_token)
       .setDeveloperKey(process.env.NEXT_PUBLIC_GOOGLE_API_KEY)
