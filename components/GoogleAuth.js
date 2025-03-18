@@ -1,12 +1,12 @@
 "use client";
 
-import { useGoogleLogin } from "@react-oauth/google";
 import { useState, useCallback, useEffect } from "react";
 
 export default function GoogleAuth() {
   const [user, setUser] = useState(null);
   const [pickerInited, setPickerInited] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [gisInited, setGisInited] = useState(false);
 
   useEffect(() => {
     const loadGoogleApis = () => {
@@ -21,18 +21,35 @@ export default function GoogleAuth() {
 
       const script2 = document.createElement("script");
       script2.src = "https://accounts.google.com/gsi/client";
+      script2.onload = () => {
+        window.google.accounts.oauth2.initTokenClient({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/drive',
+          callback: (tokenResponse) => {
+            setUser(tokenResponse);
+          },
+        });
+        setGisInited(true);
+      };
       document.body.appendChild(script2);
     };
 
     loadGoogleApis();
   }, []);
 
-  const login = useGoogleLogin({
-    onSuccess: (response) => {
-      setUser(response);
-    },
-    scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly",
-  });
+  const login = () => {
+    if (!gisInited) return;
+    
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive',
+      callback: (tokenResponse) => {
+        setUser(tokenResponse);
+      },
+    });
+    
+    tokenClient.requestAccessToken();
+  };
 
   const showPicker = useCallback(() => {
     if (!user || !pickerInited) return;
@@ -57,7 +74,6 @@ export default function GoogleAuth() {
         )
       )
       .setOAuthToken(user.access_token)
-      .setDeveloperKey(process.env.NEXT_PUBLIC_GOOGLE_API_KEY)
       .setCallback((data) => {
         if (data.action === window.google.picker.Action.PICKED) {
           const newItems = data.docs;
