@@ -51,6 +51,52 @@ export default function GoogleAuth() {
     tokenClient.requestAccessToken();
   };
 
+  // Function to fetch owner information for a file/folder
+  const fetchOwnerInfo = async (fileId, accessToken) => {
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=owners`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.owners?.[0]?.emailAddress || await getCurrentUserEmail(accessToken);
+      }
+    } catch (error) {
+      console.error('Error fetching owner info:', error);
+    }
+    return await getCurrentUserEmail(accessToken);
+  };
+
+  // Function to get the current authenticated user's email
+  const getCurrentUserEmail = async (accessToken) => {
+    try {
+      const response = await fetch(
+        'https://www.googleapis.com/oauth2/v2/userinfo',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.email || "Unknown Owner";
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+    }
+    return "Unknown Owner";
+  };
+
   const showPicker = useCallback(() => {
     if (!user || !pickerInited) return;
 
@@ -74,9 +120,20 @@ export default function GoogleAuth() {
         )
       )
       .setOAuthToken(user.access_token)
-      .setCallback((data) => {
+      .setCallback(async (data) => {
         if (data.action === window.google.picker.Action.PICKED) {
           const newItems = data.docs;
+          
+          // Fetch owner information for each item
+          const itemsWithOwners = await Promise.all(
+            newItems.map(async (item) => {
+              const owner = await fetchOwnerInfo(item.id, user.access_token);
+              return {
+                ...item,
+                owner: owner
+              };
+            })
+          );
           
           // Merge new selections with existing ones
           setSelectedItems(prevItems => {
@@ -86,7 +143,7 @@ export default function GoogleAuth() {
             );
             
             // Add new items if they don't exist
-            newItems.forEach(item => {
+            itemsWithOwners.forEach(item => {
               if (!existingItemsMap.has(item.id)) {
                 existingItemsMap.set(item.id, item);
               }
@@ -98,10 +155,11 @@ export default function GoogleAuth() {
 
           console.log(
             "Selected items:",
-            newItems.map((item) => ({
+            itemsWithOwners.map((item) => ({
               name: item.name,
               id: item.id,
               type: item.mimeType.includes("folder") ? "Folder" : "File",
+              owner: item.owner,
             }))
           );
         }
@@ -148,10 +206,15 @@ export default function GoogleAuth() {
                               key={item.id}
                               className="p-3 bg-gray-50 rounded flex justify-between items-center"
                             >
-                              <span className="text-sm">
-                                {index + 1}. {item.name}
-                                {item.mimeType.includes("folder") && " "}
-                              </span>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium">
+                                  {index + 1}. {item.name}
+                                  {item.mimeType.includes("folder") && " "}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Owner: {item.owner}
+                                </div>
+                              </div>
                               {item.mimeType.includes("folder") && (
                                 <button
                                   onClick={() => removeItem(item.id)}
