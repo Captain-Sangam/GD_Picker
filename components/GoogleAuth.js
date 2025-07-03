@@ -211,9 +211,6 @@ export default function GoogleAuth() {
                                   {index + 1}. {item.name}
                                   {item.mimeType.includes("folder") && " "}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  Owner: {item.owner}
-                                </div>
                               </div>
                               {item.mimeType.includes("folder") && (
                                 <button
